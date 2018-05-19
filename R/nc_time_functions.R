@@ -77,3 +77,50 @@ nctime_get = function(netcdf_file,
         print("Time info returned.")
     return(time_df)
 }
+
+
+
+
+# This function returns a list with a time unit and time values for a relative
+# time vector (days since ...) that can be used for storing in a netcdf file
+# Reads in:
+#   - time: vector of either characters or POSIXcts
+# Returns:
+#   - list with: time_unit, time_vals
+
+time2nctime = function(time, orders = c("ymd", "ymdHM", "ymdHMS", "y", "ym")) {
+
+  # some tests
+  stopifnot(is.character(time) || is.POSIXt(time)  ||
+              is.factor(time) || is.numeric(time))
+
+  if (is.factor(time)) {
+    time = as.character(time)
+    time = lubridate::parse_date_time(time, orders = orders)
+  } else if (is.character(time)) {
+    time = lubridate::parse_date_time(time, orders = c("ymd", "ymdHM", "ymdHMS", "y", "ym"))
+  } else if (is.numeric(time) && all(time >= 1000)) { # arbitrary cut-off, but assumption is that values above 1000 are all years (as opposed to just time steps)
+    time = lubridate::parse_date_time(time, orders = "y")
+  } # otherwise, time stays a numeric time vector
+
+  if (lubridate::is.POSIXct(time)) {
+    origin = as.character(min(time))
+    time_vals = time - min(time)
+    unit = units(time_vals)
+
+    if (unit == "secs") {
+      time_vals = time_vals / (24*60*60)
+      unit = "days"
+    } else if (unit == "mins") {
+      time_vals = time_vals / (24*60)
+      unit = "days"
+    }
+    time_unit = sprintf("%s since %s", unit, origin)
+
+  } else if (is.numeric(time)) {
+    time_vals = time
+    time_unit = "time steps"
+  }
+
+  return(list(time_vals = time_vals, time_unit = time_unit))
+}
