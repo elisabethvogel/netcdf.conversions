@@ -1,0 +1,14 @@
+Package: netcdf.conversions
+Type: Package
+Title: Netcdf Utilities For R Users
+Version: 0.0.0.9000
+Author: Elisabeth Vogel <elisabeth.vogel@climate-energy-college.org> for the 
+	Climate & Energy College, University of Melbourne
+Maintainer: Elisabeth Vogel <elisabeth.vogel@climate-energy-college.org>
+Description: This package provides functions to convert netcdf files to other 
+	commonly used file formats (most importantly to and from R data frame)
+License: GPL-3
+Encoding: UTF-8
+LazyData: true
+Suggests: 
+    testthat
