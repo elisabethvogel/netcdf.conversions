@@ -12,3 +12,7 @@ Encoding: UTF-8
 LazyData: true
 Suggests: 
     testthat
+Imports: 
+    ncdf.tools,
+    ncdf4,
+    lubridate
