@@ -15,4 +15,6 @@ Suggests:
 Imports: 
     ncdf.tools,
     ncdf4,
-    lubridate
+    lubridate,
+    reshape2,
+    dplyr
