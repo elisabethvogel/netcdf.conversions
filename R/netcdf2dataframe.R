@@ -287,8 +287,8 @@ netcdf2dataframe = function(netcdf_file, variables = "all", remove_NA = FALSE,
                                 count = count_var, collapse_degen = FALSE)
 
     # create named array
-    dim_size_var = dim_size[var_dimensions]
-    dimnames_var = coordinates[var_dimensions]
+    dim_size_var = rev(dim_size[var_dimensions])
+    dimnames_var = rev(coordinates[var_dimensions])
     var_vals = array(data = var_vals, dim = dim_size_var, dimnames = dimnames_var)
 
     if (consistent_dimensions == FALSE) {
@@ -339,7 +339,7 @@ netcdf2dataframe = function(netcdf_file, variables = "all", remove_NA = FALSE,
   # if applicable, add time columns (year, month, day, ...) to data frame
   if (return_time_columns) {
     time_df$time = as.factor(time_df$POSIXct)
-      data_frame = dplyr::left_join(data_frame, time_df)
+    data_frame = dplyr::left_join(data_frame, time_df)
   }
 
   # set the correct time format
