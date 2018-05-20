@@ -13,8 +13,4 @@ LazyData: true
 Suggests: 
     testthat
 Imports:
-    ncdf4,
-    ncdf.tools,
-    lubridate,
-    reshape2,
-    dplyr
+    ncdf.tools
