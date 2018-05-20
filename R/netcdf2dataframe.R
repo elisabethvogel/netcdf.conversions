@@ -1,7 +1,4 @@
-# function: netcdf2dataframe ----------------------------------------
-#
-#   This function creates a data frame from a netcdf file.
-
+#' @importFrom dplyr %>%
 netcdf2dataframe = function(netcdf_file, variables = "all", remove_NA = FALSE,
                             time_format = NULL, start_idx = NULL, end_idx = NULL,
                             count = NULL, grid_cells = NULL, years = NULL,

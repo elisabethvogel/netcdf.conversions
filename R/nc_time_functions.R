@@ -91,7 +91,7 @@ nctime_get = function(netcdf_file,
 time2nctime = function(time, orders = c("ymd", "ymdHM", "ymdHMS", "y", "ym")) {
 
   # some tests
-  stopifnot(is.character(time) || is.POSIXt(time)  ||
+  stopifnot(is.character(time) || lubridate::is.POSIXt(time)  ||
               is.factor(time) || is.numeric(time))
 
   if (is.factor(time)) {
