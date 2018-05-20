@@ -48,7 +48,7 @@ netcdf2dataframe = function(netcdf_file, variables = "all", remove_NA = FALSE,
   }
 
   # get dimension names and values
-  dim_info = ncdf.tools::infoNcdfDims(netcdf_file)
+  # dim_info = ncdf.tools::infoNcdfDims(netcdf_file)
 
   # if bnds is part of the dims, remove it (from cdo averaging)
   dim_info = dim_info %>% dplyr::filter(name != "bnds")
@@ -161,7 +161,7 @@ netcdf2dataframe = function(netcdf_file, variables = "all", remove_NA = FALSE,
   }
 
   # get variable names and dimensions
-  var_info = ncdf.tools::infoNcdfVars(netcdf_file)
+  # var_info = ncdf.tools::infoNcdfVars(netcdf_file)
 
   # if time_bnds is part of the variables, remove it (from cdo averaging)
   var_info = var_info %>% dplyr::filter(name != "time_bnds")

@@ -13,7 +13,7 @@ nctime_get = function(netcdf_file,
     stopifnot(all(return_variables %in% c("POSIXct", "year", "month", "day", "hour", "minute", "second", "origin", "unit", "vals")))
 
     # test if netcdf has a time variable
-    dims = ncdf.tools::infoNcdfDims(netcdf_file)
+    # dims = ncdf.tools::infoNcdfDims(netcdf_file)
     if (!("time" %in% dims$name)) {
         warning("Netcdf file does not have a time dimension.")
         return(NULL)
