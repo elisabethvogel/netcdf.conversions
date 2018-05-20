@@ -1,19 +1,17 @@
-# function: dataframe2netcdf ----------------------------------------
-#
-#   This function writes a data frame into a netcdf file
-#   Reads in:
-#     - data_frame: has to include dimension names and at least one variable
-#       (all variables are assumed to be dependent on all dimensions)
-#     - netcdf_file: filename for where to save the netcdf file
-#     - dim_names: can be any kind of number, but names have to be in data frame
-#     - dim_units: has to be the same length as dim_names
-#     - var_names: names of columns that should be used in the netcdf file
-#     - var_units = has to be same length as var_names
-#     - overwrite_existing: if the file exists already, should the existing file be removed (if false, the function will try to add variables to the existing file)
-#     - verbose
-#   Returns:
-#     - filename of output netcdf when successful
-
+#' Writing a data frame to a netcdf file.
+#'
+#' @param data_frame          Data frame that includes dimension names and at least one variable.
+#' @param netcdf_file         File path for netcdf file to write to.
+#' @param dim_names           Names of dimensions in data frame.
+#' @param dim_units           Units for all dimensions.
+#' @param var_names           Names of variables in data frame.
+#' @param var_units           Units for all variables.
+#' @param overwrite_existing  If file exists already, should it be overwritten?
+#' @param fill_dimensions     If TRUE, dimensions will be extended to cover the whole world.
+#' @param max_resolution_testing Maximum number of resolutions to be tested, for dimension filling.
+#' @param verbose             Include print statements.
+#' @return Returns file name of netcdf file, if saved successfully.
+#' @export
 dataframe2netcdf = function(data_frame,
                             netcdf_file,
                             dim_names = intersect(names(data_frame),
@@ -29,12 +27,12 @@ dataframe2netcdf = function(data_frame,
   if (verbose) print("function: dataframe2netcdf")
 
   # Some tests
-  stopifnot(nrow(data_frame) > 0)
-  stopifnot(is.data.frame(data_frame))
-  stopifnot(length(dim_names) %in% c(2,3), length(dim_names) == length(dim_units))
-  stopifnot(length(var_names) >= 1, length(var_units) == length(var_names))
-  stopifnot(is.character(dim_names), is.character(dim_units), is.character(var_names), is.character(var_units))
+  stopifnot(is.data.frame(data_frame), nrow(data_frame) > 0)
+  if (!is.null(dim_units)) stopifnot(length(dim_names) == length(dim_units))
+  if (!is.null(var_units)) stopifnot(length(var_units) == length(var_names))
   stopifnot(is.logical(fill_dimensions))
+
+  x = 1
 
   # Get units for each dimension
   if (is.null(dim_units)) {
@@ -48,7 +46,7 @@ dataframe2netcdf = function(data_frame,
   if (file.exists(netcdf_file) & overwrite_existing) {
     file.remove(netcdf_file)
   } else if (file.exists(netcdf_file) & !overwrite_existing) {
-    stop("File already exists.")
+    stop("File exists already.")
   }
 
   # select only dimensions and variables that were passed to function
@@ -64,7 +62,6 @@ dataframe2netcdf = function(data_frame,
     # to do: create better implementation for time unit here
 
     dim_name = dim_names[dim_idx]
-    stopifnot(dim_name %in% names(data_frame)) # test that the dimension is really in the data_frame
 
     if (dim_name == "time") {
       temp = time2nctime(data_frame$time)
@@ -77,63 +74,66 @@ dataframe2netcdf = function(data_frame,
       dim_unit = dim_units[dim_idx]
       dim_vals = sort(unique(data_frame[, dim_name, drop = TRUE]))
 
-      # check for evenly distributed values for lat/lon
-      # (otherwise the netcdf file looks wrong)
-      # round because of subtraction error
-      dist = round(dim_vals[2:length(dim_vals)] - dim_vals[1:length(dim_vals) - 1], 10)
+      if (length(dim_vals) > 2) {
 
-      res_temp = min(dist) # guess the resolution by taking the smallest difference
+        # check for evenly distributed values for lat/lon
+        # (otherwise the netcdf file looks wrong)
 
-      # if there are unevenly distributed values, try to guess resolution and
-      # fill up with NAs
-      if (length(unique(dist)) != 1) { # unevenly distributed
+        # round because of subtraction error
+        dist = round(dim_vals[2:length(dim_vals)] - dim_vals[1:length(dim_vals) - 1], 10)
 
-        # test different resolutions
+        res_temp = min(dist) # guess the resolution by taking the smallest difference
 
-        for (k in 1:max_resolution_testing) {
+        # if there are unevenly distributed values, try to guess resolution and
+        # fill up with NAs
+        if (length(unique(dist)) != 1) { # unevenly distributed
 
-          if (verbose) print(sprintf("Testing resolution: %.3f", res_temp/k))
+          # test different resolutions
+          for (k in 1:max_resolution_testing) {
 
-          dim_vals_new = seq(min(dim_vals), max(dim_vals), by = res_temp/k)
+            if (verbose) print(sprintf("Testing resolution: %.5f", res_temp/k))
+
+            dim_vals_new = seq(min(dim_vals), max(dim_vals), by = res_temp/k)
+
+            # test if all old dim_vals are completely included in dim_vals_new
+            if (all(dim_vals %in% dim_vals_new)) {
+              if (verbose) print("Ok, this worked...")
+              dim_vals = dim_vals_new
+              break # stop here
+            }
+
+            if (k == max_resolution_testing) {
+              # if it didn't work until here
+              stop(sprintf("Uneven values in %s dimension. Could not create netcdf file.", dim_name))
+            }
+          }
+        }
+
+        # fill dimensions (lon: 0 - 360, lat: -90 - 90)
+        if (fill_dimensions && dim_name %in% c("lon", "longitude", "lat", "latitude")) {
+
+          if (dim_name %in% c("lon", "longitude")) {
+            if (any(dim_vals > 180)) {
+              # longitudes from 0 to 360
+              dim_vals_new = seq(0 + res_temp/2, 360 - res_temp/2, by = res_temp)
+            } else {
+              dim_vals_new = seq(-180 + res_temp/2, 180 - res_temp/2, by = res_temp)
+            }
+
+          } else if (dim_name %in% c("lat", "latitude")) {
+            if (any(dim_vals > 90)) {
+              dim_vals_new = seq(0 + res_temp/2, 180 - res_temp/2, by = res_temp)
+            } else {
+              dim_vals_new = seq(-90 + res_temp/2, 90 - res_temp/2, by = res_temp)
+            }
+          }
 
           # test if all old dim_vals are completely included in dim_vals_new
           if (all(dim_vals %in% dim_vals_new)) {
-            if (verbose) print("Ok, this worked...")
             dim_vals = dim_vals_new
-            break # stop here
-          }
-
-          if (k == max_resolution_testing) {
-            # if it didn't work until here
-            stop(sprintf("Uneven values in %s dimension. Could not create netcdf file.", dim_name))
-          }
-        }
-      }
-
-      # fill dimensions (lon: 0 - 360, lat: -90 - 90)
-      if (fill_dimensions && dim_name %in% c("lon", "longitude", "lat", "latitude")) {
-
-        if (dim_name %in% c("lon", "longitude")) {
-          if (any(dim_vals > 180)) {
-            # longitudes from 0 to 360
-            dim_vals_new = seq(0 + res_temp/2, 360 - res_temp/2, by = res_temp)
           } else {
-            dim_vals_new = seq(-180 + res_temp/2, 180 - res_temp/2, by = res_temp)
+            stop(sprintf("Could not fill %s dimension. Stopped.", dim_name))
           }
-
-        } else if (dim_name %in% c("lat", "latitude")) {
-          if (any(dim_vals > 90)) {
-            dim_vals_new = seq(0 + res_temp/2, 180 - res_temp/2, by = res_temp)
-          } else {
-            dim_vals_new = seq(-90 + res_temp/2, 90 - res_temp/2, by = res_temp)
-          }
-        }
-
-        # test if all old dim_vals are completely included in dim_vals_new
-        if (all(dim_vals %in% dim_vals_new)) {
-          dim_vals = dim_vals_new
-        } else { # give up
-          stop(sprintf("Could not fill %s dimension. Stopped.", dim_name))
         }
       }
     }
@@ -154,12 +154,8 @@ dataframe2netcdf = function(data_frame,
   var_nc = list()
   for (var_idx in 1:length(var_names)) {
     var_name = var_names[var_idx]
-    if (!is.numeric(data_frame[, var_name, drop = TRUE]))
-      next # only put numeric variables into netcdf file
-
-    # test that the variable is really in the data_frame
-    # todo: add into beginning of script
-    stopifnot(var_name %in% names(data_frame))
+    if (!is.numeric(data_frame[, var_name, drop = TRUE])) next
+    # to do: implement non-numeric variables
 
     var_unit = var_units[var_idx]
     var_nc[[var_name]] = ncdf4::ncvar_def(name = var_name,
@@ -184,7 +180,8 @@ dataframe2netcdf = function(data_frame,
   for (var_idx in 1:length(var_names)) {
     var_name = var_names[var_idx]
 
-    if (!is.numeric(data_frame[, var_name, drop = TRUE])) next # only put numeric variables into netcdf file
+    if (!is.numeric(data_frame[, var_name, drop = TRUE])) next
+    # to do: implement non-numeric variables
 
     var_vals = data_frame[, c(dim_names, var_name)]
 
