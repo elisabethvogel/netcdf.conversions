@@ -310,7 +310,7 @@ netcdf2dataframe = function(netcdf_file, variables = "all", remove_NA = FALSE,
     if (is.null(data_frame)) {
       data_frame = var_data_frame
     } else {
-      data_frame = merge(data_frame, var_data_frame, all = TRUE)
+      data_frame = dplyr::full_join(data_frame, var_data_frame)
       names(data_frame)[ncol(data_frame)] = var_name
     }
 
@@ -326,7 +326,7 @@ netcdf2dataframe = function(netcdf_file, variables = "all", remove_NA = FALSE,
     grid_cells[, lat_name] = grid_cells$lat
     grid_cells[, lon_name] = grid_cells$lon # change the names to the ones used in the netcdf file
     grid_cells = grid_cells[, c(lon_name, lat_name)]
-    data_frame = merge(data_frame, grid_cells, all = FALSE)
+    data_frame = dplyr::inner_join(data_frame, grid_cells)
   }
 
   # remove years that are not needed
@@ -339,7 +339,7 @@ netcdf2dataframe = function(netcdf_file, variables = "all", remove_NA = FALSE,
   # if applicable, add time columns (year, month, day, ...) to data frame
   if (return_time_columns) {
     time_df$time = as.factor(time_df$POSIXct)
-      data_frame = merge(data_frame, time_df, all.x = TRUE, all.y = FALSE)
+      data_frame = dplyr::left_join(data_frame, time_df)
   }
 
   # set the correct time format
