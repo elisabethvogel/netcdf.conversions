@@ -56,16 +56,15 @@ nctime_get = function(netcdf_file,
     }
 
     # add year, month, day, hour, minute, second, origin, unit and vals to time_df
-    time_df = dplyr::mutate(time_df,
-                            year = lubridate::year(POSIXct),
-                            month = lubridate::month(POSIXct),
-                            day = lubridate::day(POSIXct),
-                            hour = lubridate::hour(POSIXct),
-                            minute = lubridate::minute(POSIXct),
-                            second = lubridate::second(POSIXct),
-                            origin = time_origin,
-                            unit = time_unit,
-                            vals = time_vals)
+    time_df$year = lubridate::year(time_df$POSIXct)
+    time_df$month = lubridate::month(time_df$POSIXct)
+    time_df$day = lubridate::day(time_df$POSIXct)
+    time_df$hour = lubridate::hour(time_df$POSIXct)
+    time_df$minute = lubridate::minute(time_df$POSIXct)
+    time_df$second = lubridate::second(time_df$POSIXct)
+    time_df$origin = time_origin
+    time_df$unit = time_unit
+    time_df$vals = time_vals
 
     # subset to only variables of interest
     time_df = time_df[, return_variables]

@@ -7,6 +7,7 @@
 #' @param start_idx           Specify the start index of the read in.
 #' @param end_idx,count       Specify either the end index (end_idx) or the number of steps to read in (count).
 #' @param grid_cells          Data frame with lat/lon columns that specify the coordinates to read in.
+#' @param return_time_columns If TRUE, it returns columns containing time information (e.g. year, month, day, etc.)
 #' @param years               Specify which years should be read in.
 #' @param verbose             Include print statements.
 #' @return A data frame with the dimensions and variables stored in the netcdf file, as specified.
@@ -61,8 +62,8 @@ netcdf2dataframe = function(netcdf_file, variables = "all", remove_NA = FALSE,
   # check grid cells is a data frame with two columns: latitudes and longitudes
   if (!is.null(grid_cells)) {
     stopifnot(is.data.frame(grid_cells) &&
-                 length(intersect(names(grid_cells),
-                                  c("lat", "lon", "latitude", "longitude")) == 2))
+                length(intersect(names(grid_cells),
+                                 c("lat", "lon", "latitude", "longitude")) == 2))
   }
 
 
@@ -232,7 +233,7 @@ netcdf2dataframe = function(netcdf_file, variables = "all", remove_NA = FALSE,
   var_names = var_info$name
 
   # check if all variables use the same dimensions (then merging not necessary, which can be slow)
-  dim_columns = var_info %>% dplyr::select(dplyr::ends_with(".dim"))
+  dim_columns = dplyr::select(var_info, dplyr::ends_with(".dim"))
   number_of_dims = apply(dim_columns, 2, function(x) length(unique(x)))
 
   if (all(number_of_dims == 1)) {
@@ -257,8 +258,9 @@ netcdf2dataframe = function(netcdf_file, variables = "all", remove_NA = FALSE,
     var_name = var_info[var_number, 2]
     if (verbose) print(sprintf("- %s", var_name))
 
-    var_dimensions = var_info[var_number, ] %>%
-      dplyr::select(dplyr::ends_with(".dim")) %>% t()
+    var_dimensions = var_info[var_number, ]
+    var_dimensions = dplyr::select(var_dimensions, dplyr::ends_with(".dim"))
+    var_dimensions = t(var_dimensions)
     var_dimensions = var_dimensions[!is.na(var_dimensions)]
 
     # test if all var_dimensions were read in into coordinates, if not skip variable
@@ -278,7 +280,7 @@ netcdf2dataframe = function(netcdf_file, variables = "all", remove_NA = FALSE,
     if (length(count) == 1 && is.na(count)) {
       count_var = NA
     } else {
-    count_var = rev(count[var_dimensions])
+      count_var = rev(count[var_dimensions])
     }
 
     var_vals = ncdf4::ncvar_get(nc = nc, varid = var_name, start = start_idx_var,
@@ -336,15 +338,14 @@ netcdf2dataframe = function(netcdf_file, variables = "all", remove_NA = FALSE,
 
   # if applicable, add time columns (year, month, day, ...) to data frame
   if (return_time_columns) {
-    time_df$time = as.factor(time_df$POSIXct) %>%
-    data_frame = merge(data_frame, time_df,
-                        all.x = TRUE, all.y = FALSE)
+    time_df$time = as.factor(time_df$POSIXct)
+      data_frame = merge(data_frame, time_df, all.x = TRUE, all.y = FALSE)
   }
 
   # set the correct time format
   if (!is.null(time_format)) {
-    temp_format = data.frame(time = unique(data_frame$time)) %>%
-      dplyr::mutate(new_time = format(as.POSIXct(time), format = time_format))
+    temp_format = data.frame(time = unique(data_frame$time))
+    temp_format$new_time = format(as.POSIXct(temp_format$time), format = time_format)
     data_frame$time = temp_format$new_time[match(data_frame$time, temp_format$time)]
 
   } else if (is.null(time_format) && !is.null(years)) {

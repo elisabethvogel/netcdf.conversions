@@ -26,6 +26,8 @@ netcdf2dataframe(netcdf_file, variables = "all", remove_NA = FALSE,
 
 \item{years}{Specify which years should be read in.}
 
+\item{return_time_columns}{If TRUE, it returns columns containing time information (e.g. year, month, day, etc.)}
+
 \item{verbose}{Include print statements.}
 }
 \value{
