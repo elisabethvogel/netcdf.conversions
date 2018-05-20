@@ -13,7 +13,6 @@ LazyData: true
 Suggests: 
     testthat
 Imports:
-    Imports:
     ncdf4,
     lubridate,
     reshape2,
