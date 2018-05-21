@@ -288,8 +288,15 @@ netcdf2dataframe = function(netcdf_file, variables = "all", remove_NA = FALSE,
                                 count = count_var, collapse_degen = FALSE)
 
     # create named array
-    dim_size_var = rev(dim_size[var_dimensions])
-    dimnames_var = rev(coordinates[var_dimensions])
+    dim_size_var = dim_size[var_dimensions]
+    if (all(dim_size_var == dim(var_vals))) {
+      dimnames_var = coordinates[var_dimensions] # rev?
+    } else {
+      dim_size_var = rev(dim_size[var_dimensions])
+      dimnames_var = rev(coordinates[var_dimensions])
+    }
+
+    stopifnot(all(dim_size_var == dim(var_vals))) # dimensions have to be in correct order
     var_vals = array(data = var_vals, dim = dim_size_var, dimnames = dimnames_var)
 
     if (consistent_dimensions == FALSE) {
