@@ -376,7 +376,7 @@ netcdf2dataframe = function(netcdf_file, variables = "all", remove_NA = FALSE,
   } else if (has_time == TRUE && lat_name == "latitude" && lon_name == "longitude") {
     data_frame = dplyr::arrange_(data_frame, "longitude", "latitude", "time")
   } else if (has_time == FALSE && lat_name == "lat" && lon_name == "lon") {
-    data_frame = dplyr::arrange_(data_frame, "lon", "lat", "time")
+    data_frame = dplyr::arrange_(data_frame, "lon", "lat")
   } else if (has_time == FALSE && lat_name == "latitude" && lon_name == "longitude") {
     data_frame = dplyr::arrange_(data_frame, "longitude", "latitude")
   }
