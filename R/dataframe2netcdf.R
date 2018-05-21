@@ -6,6 +6,7 @@
 #' @param dim_units           Units for all dimensions.
 #' @param var_names           Names of variables in data frame.
 #' @param var_units           Units for all variables.
+#' @param var_longnames       Longnames for each variable (default is variable name).
 #' @param overwrite_existing  If file exists already, should it be overwritten?
 #' @param fill_dimensions     If TRUE, dimensions will be extended to cover the whole world.
 #' @param max_resolution_testing Maximum number of resolutions to be tested, for dimension filling.
@@ -19,6 +20,7 @@ dataframe2netcdf = function(data_frame,
                             dim_units = NULL,
                             var_names = names(data_frame)[!names(data_frame) %in% dim_names],
                             var_units = rep("", length(var_names)),
+                            var_longnames = var_names,
                             overwrite_existing = FALSE,
                             fill_dimensions = FALSE,
                             max_resolution_testing = 5,
@@ -31,8 +33,6 @@ dataframe2netcdf = function(data_frame,
   if (!is.null(dim_units)) stopifnot(length(dim_names) == length(dim_units))
   if (!is.null(var_units)) stopifnot(length(var_units) == length(var_names))
   stopifnot(is.logical(fill_dimensions))
-
-  x = 1
 
   # Get units for each dimension
   if (is.null(dim_units)) {
@@ -154,12 +154,14 @@ dataframe2netcdf = function(data_frame,
   var_nc = list()
   for (var_idx in 1:length(var_names)) {
     var_name = var_names[var_idx]
+    var_longname = var_longnames[var_idx]
     if (!is.numeric(data_frame[, var_name, drop = TRUE])) next
     # to do: implement non-numeric variables
 
     var_unit = var_units[var_idx]
     var_nc[[var_name]] = ncdf4::ncvar_def(name = var_name,
                                           units = var_unit,
+                                          longname = var_longname,
                                           dim = dim_nc,
                                           prec = "double")
   }

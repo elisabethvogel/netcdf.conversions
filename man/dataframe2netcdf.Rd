@@ -8,8 +8,9 @@ dataframe2netcdf(data_frame, netcdf_file,
   dim_names = intersect(names(data_frame), c("lon", "lat", "longitude",
   "latitude", "time")), dim_units = NULL,
   var_names = names(data_frame)[!names(data_frame) \%in\% dim_names],
-  var_units = rep("", length(var_names)), overwrite_existing = FALSE,
-  fill_dimensions = FALSE, max_resolution_testing = 5, verbose = FALSE)
+  var_units = rep("", length(var_names)), var_longnames = var_names,
+  overwrite_existing = FALSE, fill_dimensions = FALSE,
+  max_resolution_testing = 5, verbose = FALSE)
 }
 \arguments{
 \item{data_frame}{Data frame that includes dimension names and at least one variable.}
@@ -23,6 +24,8 @@ dataframe2netcdf(data_frame, netcdf_file,
 \item{var_names}{Names of variables in data frame.}
 
 \item{var_units}{Units for all variables.}
+
+\item{var_longnames}{Longnames for each variable (default is variable name).}
 
 \item{overwrite_existing}{If file exists already, should it be overwritten?}
 
