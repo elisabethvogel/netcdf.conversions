@@ -147,7 +147,9 @@ dataframe2netcdf = function(data_frame,
   stopifnot(nrow(dimensions_new) >= nrow(data_frame))
 
   if (nrow(dimensions_new) > nrow(data_frame)) {
-    data_frame = dplyr::full_join(dimensions_new, data_frame)
+    data_frame = dplyr::full_join(x = dimensions_new, y = data_frame,
+                                  by = intersect(names(dimensions_new),
+                                                 names(data_frame)))
   }
 
   # for all variables, define a netcdf variable

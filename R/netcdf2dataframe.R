@@ -146,7 +146,6 @@ netcdf2dataframe = function(netcdf_file, variables = "all", remove_NA = FALSE,
   }
 
   # define start_idx and end_idx from lat/lon information in grid_cells if applicable
-  x = 1
   if (!is.null(grid_cells)) {
     grid_cells$lat = grid_cells[, names(grid_cells) %in% c("lat", "latitude")]
     grid_cells$lon = grid_cells[, names(grid_cells) %in% c("lon", "longitude")]
@@ -312,7 +311,9 @@ netcdf2dataframe = function(netcdf_file, variables = "all", remove_NA = FALSE,
     if (is.null(data_frame)) {
       data_frame = var_data_frame
     } else {
-      data_frame = dplyr::full_join(data_frame, var_data_frame)
+      data_frame = dplyr::full_join(x = data_frame, y = var_data_frame,
+                                    by = intersect(names(data_frame),
+                                                   names(var_data_frame)))
       names(data_frame)[ncol(data_frame)] = var_name
     }
 
@@ -328,7 +329,9 @@ netcdf2dataframe = function(netcdf_file, variables = "all", remove_NA = FALSE,
     grid_cells[, lat_name] = grid_cells$lat
     grid_cells[, lon_name] = grid_cells$lon # change the names to the ones used in the netcdf file
     grid_cells = grid_cells[, c(lon_name, lat_name)]
-    data_frame = dplyr::inner_join(data_frame, grid_cells)
+    data_frame = dplyr::inner_join(x = data_frame, y = grid_cells,
+                                   by = intersect(names(data_frame),
+                                                  names(grid_cells)))
   }
 
   # remove years that are not needed
@@ -341,7 +344,9 @@ netcdf2dataframe = function(netcdf_file, variables = "all", remove_NA = FALSE,
   # if applicable, add time columns (year, month, day, ...) to data frame
   if (return_time_columns) {
     time_df$time = as.factor(time_df$POSIXct)
-    data_frame = dplyr::left_join(data_frame, time_df)
+    data_frame = dplyr::left_join(x = data_frame, y = time_df,
+                                  by = intersect(names(data_frame),
+                                                 names(time_df)))
   }
 
   # set the correct time format
