@@ -275,17 +275,28 @@ netcdf2dataframe = function(netcdf_file, variables = "all", remove_NA = FALSE,
     if (length(start_idx) == 1 && is.na(start_idx)) {
       start_idx_var = NA
     } else {
-      start_idx_var = rev(start_idx[var_dimensions])
+      start_idx_var = start_idx[var_dimensions]
     }
 
     if (length(count) == 1 && is.na(count)) {
       count_var = NA
     } else {
-      count_var = rev(count[var_dimensions])
+      count_var = count[var_dimensions]
     }
 
-    var_vals = ncdf4::ncvar_get(nc = nc, varid = var_name, start = start_idx_var,
-                                count = count_var, collapse_degen = FALSE)
+    var_vals = NULL
+    # Try start_idx and count_var, if it doesn't work - reverse
+    try(
+      expr = {var_vals = ncdf4::ncvar_get(nc = nc, varid = var_name, start = start_idx_var,
+                                count = count_var, collapse_degen = FALSE)},
+      silent = TRUE)
+
+    if (is.null(var_vals)) {
+      start_idx_var = rev(start_idx_var)
+      count_var = rev(count_var)
+      var_vals = ncdf4::ncvar_get(nc = nc, varid = var_name, start = start_idx_var,
+                                  count = count_var, collapse_degen = FALSE)
+    }
 
     # create named array
     dim_size_var = dim_size[var_dimensions]
