@@ -17,5 +17,6 @@ Imports:
     ncdf.tools,
     lubridate,
     reshape2,
-    dplyr
+    dplyr,
+    gtools
 RoxygenNote: 6.0.1
