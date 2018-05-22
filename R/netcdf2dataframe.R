@@ -142,8 +142,7 @@ netcdf2dataframe = function(netcdf_file, variables = "all", remove_NA = FALSE,
     stop("This netcdf file does not have a time dimension.")
 
   if (!is.null(time_format) || !is.null(years)) {
-    # coordinates$time = format(time_df$POSIXct, format = time_format)
-    coordinates$time = format(time_df$POSIXct) # need the full time information here
+    coordinates$time = format(time_df$POSIXct)
     # the correct time format will be set later in the code (after reading in everything)
     stopifnot(length(coordinates$time) == length(unique(coordinates$time))) # no duplicates
   }
@@ -291,7 +290,7 @@ netcdf2dataframe = function(netcdf_file, variables = "all", remove_NA = FALSE,
     # Try start_idx and count_var, if it doesn't work - reverse
     try(
       expr = {var_vals = ncdf4::ncvar_get(nc = nc, varid = var_name, start = start_idx_var,
-                                count = count_var, collapse_degen = FALSE)},
+                                          count = count_var, collapse_degen = FALSE)},
       silent = TRUE)
 
     if (is.null(var_vals)) {
@@ -356,18 +355,22 @@ netcdf2dataframe = function(netcdf_file, variables = "all", remove_NA = FALSE,
   }
 
   # remove years that are not needed
-  if (!is.null(years)) {
-    data_frame$year = lubridate::year(data_frame$time)
-    data_frame = data_frame[data_frame$year %in% years, ]
-    data_frame$year = NULL
-  }
-
-  # if applicable, add time columns (year, month, day, ...) to data frame
-  if (return_time_columns) {
-    time_df$time = as.factor(time_df$POSIXct)
+  if (!is.null(years) || return_time_columns) {
+    time_df$time = format(time_df$POSIXct)
+    data_frame$time = as.character(data_frame$time)
     data_frame = dplyr::left_join(x = data_frame, y = time_df,
                                   by = intersect(names(data_frame),
                                                  names(time_df)))
+    # subset years
+    if (!is.null(years)) {
+      data_frame = data_frame[data_frame$year %in% years, ]
+    }
+
+    # remove columns again if not needed
+    if (!return_time_columns) {
+      time_cols = names(time_df)[names(time_df) != "time"]
+      data_frame = data_frame[, !names(data_frame) %in% time_cols]
+    }
   }
 
   # set the correct time format
