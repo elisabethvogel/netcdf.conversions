@@ -272,43 +272,49 @@ netcdf2dataframe = function(netcdf_file, variables = "all", remove_NA = FALSE,
       next
     }
 
+    x = 1
     # extract only start_idx and count for this var
     # reverse as this is how it's done in ncdf4 package
-    if (length(start_idx) == 1 && is.na(start_idx)) {
+    if (all(is.na(start_idx))) {
       start_idx_var = NA
     } else {
       start_idx_var = start_idx[var_dimensions]
     }
 
-    if (length(count) == 1 && is.na(count)) {
+    if (all(is.na(count))) {
       count_var = NA
     } else {
       count_var = count[var_dimensions]
     }
 
+    # try different permutations of variable names (the order of dimensions in
+    # dim_info and in the actual netcdf file can be different sometimes)
     var_vals = NULL
-    # Try start_idx and count_var, if it doesn't work - reverse
-    try(
-      expr = {var_vals = ncdf4::ncvar_get(nc = nc, varid = var_name, start = start_idx_var,
-                                          count = count_var, collapse_degen = FALSE)},
-      silent = TRUE)
-
-    if (is.null(var_vals)) {
-      start_idx_var = rev(start_idx_var)
-      count_var = rev(count_var)
-      var_vals = ncdf4::ncvar_get(nc = nc, varid = var_name, start = start_idx_var,
-                                  count = count_var, collapse_degen = FALSE)
+    orders = gtools::permutations(length(var_dimensions), length(var_dimensions))
+    for (i in 1:nrow(orders)) {
+      var_dimensions_temp = var_dimensions[orders[i,]]
+      if (!is.na(start_idx_var)) start_idx_var = start_idx_var[var_dimensions_temp]
+      if (!is.na(count_var)) count_var = count_var[var_dimensions_temp]
+      try(
+        expr = {var_vals = ncdf4::ncvar_get(nc = nc, varid = var_name,
+                                            start = start_idx_var,
+                                            count = count_var,
+                                            collapse_degen = FALSE)},
+        silent = TRUE)
+      if (!is.null(var_vals)) {
+        break
+      }
     }
+    stopifnot(!is.null(var_vals))
 
-    # create named array
-    dim_size_var = dim_size[var_dimensions]
-    if (all(dim_size_var == dim(var_vals))) {
-      dimnames_var = coordinates[var_dimensions] # rev?
-    } else {
-      dim_size_var = rev(dim_size[var_dimensions])
-      dimnames_var = rev(coordinates[var_dimensions])
+    orders = gtools::permutations(length(var_dimensions), length(var_dimensions))
+    for (i in 1:nrow(orders)) {
+      var_dimensions_temp = var_dimensions[orders[i,]]
+    # test which order of dimensions is the correct one
+      dim_size_var = dim_size[var_dimensions_temp]
+      dimnames_var = coordinates[var_dimensions_temp]
+      if (all(dim_size_var == dim(var_vals))) break
     }
-
     stopifnot(all(dim_size_var == dim(var_vals))) # dimensions have to be in correct order
     var_vals = array(data = var_vals, dim = dim_size_var, dimnames = dimnames_var)
 
