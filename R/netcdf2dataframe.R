@@ -133,7 +133,10 @@ netcdf2dataframe = function(netcdf_file, variables = "all", remove_NA = FALSE,
     has_time = FALSE
   }
 
-  if (!has_time) time_format = NULL
+  if (!has_time) {
+    time_format = NULL
+    return_time_columns = FALSE
+  }
 
   if (!has_time && (!is.null(years)))
     stop("This netcdf file does not have a time dimension.")
