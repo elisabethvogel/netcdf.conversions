@@ -69,6 +69,7 @@ netcdf2dataframe = function(netcdf_file, variables = "all", remove_NA = FALSE,
 
   # preparations ========================================
 
+  x = 1
   # option 1: both start and end idx given for all variables
   if (!is.null(start_idx) && !is.null(end_idx)) {
     stopifnot(length(start_idx) == length(end_idx))
@@ -92,7 +93,9 @@ netcdf2dataframe = function(netcdf_file, variables = "all", remove_NA = FALSE,
 
   # if bnds is part of the dims or vars, remove it (from cdo averaging)
   dim_info = dim_info[dim_info$name != "bnds", ]
-  var_info = var_info[var_info$name != "bnds", ]
+  dim_info = dim_info[dim_info$name != "nv", ]
+  var_info = var_info[var_info$name != "time_bnds", ]
+  var_info = var_info[var_info$name != "time_bounds", ]
 
   dim_names = dim_info$name
   n_dims = length(dim_names)
@@ -112,8 +115,11 @@ netcdf2dataframe = function(netcdf_file, variables = "all", remove_NA = FALSE,
       silent = TRUE
     )
 
+
     if (is.null(coordinates[[dim_name]])) {
-      coordinates[[dim_name]] = rep(NA, dim_size[dim_name])
+      print(sprintf("Could not read the values for dimension: %s. Returning a numerical vector 1, 2, ... instead.", dim_name))
+      # coordinates[[dim_name]] = rep(NA, dim_size[dim_name])
+      coordinates[[dim_name]] = seq(1, dim_size[dim_name])
     }
   }
 
@@ -151,6 +157,9 @@ netcdf2dataframe = function(netcdf_file, variables = "all", remove_NA = FALSE,
   if (!is.null(grid_cells)) {
     grid_cells$lat = grid_cells[, names(grid_cells) %in% c("lat", "latitude")]
     grid_cells$lon = grid_cells[, names(grid_cells) %in% c("lon", "longitude")]
+
+    grid_cells$lat = round(grid_cells$lat, 10)
+    grid_cells$lon = round(grid_cells$lon, 10)
 
     lat_idx_start = which(coordinates[[lat_name]] == min(grid_cells$lat))
     lat_idx_end = which(coordinates[[lat_name]] == max(grid_cells$lat))
@@ -222,6 +231,7 @@ netcdf2dataframe = function(netcdf_file, variables = "all", remove_NA = FALSE,
       }
     }
     dim_size = sapply(coordinates, length)
+    names(dim_size) = names(coordinates)
   }
 
   # filter only variable names that are passed to the function
@@ -261,10 +271,12 @@ netcdf2dataframe = function(netcdf_file, variables = "all", remove_NA = FALSE,
     var_name = var_info[var_number, 2]
     if (verbose) print(sprintf("- %s", var_name))
 
-    var_dimensions = var_info[var_number, ]
-    var_dimensions = dplyr::select(var_dimensions, dplyr::ends_with(".dim"))
-    var_dimensions = t(var_dimensions)
-    var_dimensions = var_dimensions[!is.na(var_dimensions)]
+    # get the order of dimensions using ncdf4, because InfoNetcdfDims is ureliable
+    # (it often returns a wrong order of dimensions)
+    dim_info = nc$var[[var_name]]$dim
+    var_dimensions = sapply(1:length(dim_info), function(x) dim_info[[x]]$name)
+    dimnames_var = coordinates[var_dimensions]
+    dim_size_var = dim_size[var_dimensions]
 
     # test if all var_dimensions were read in into coordinates, if not skip variable
     if (!all(var_dimensions %in% names(coordinates))) {
@@ -272,9 +284,7 @@ netcdf2dataframe = function(netcdf_file, variables = "all", remove_NA = FALSE,
       next
     }
 
-    x = 1
     # extract only start_idx and count for this var
-    # reverse as this is how it's done in ncdf4 package
     if (all(is.na(start_idx))) {
       start_idx_var = NA
     } else {
@@ -287,35 +297,15 @@ netcdf2dataframe = function(netcdf_file, variables = "all", remove_NA = FALSE,
       count_var = count[var_dimensions]
     }
 
-    # try different permutations of variable names (the order of dimensions in
-    # dim_info and in the actual netcdf file can be different sometimes)
     var_vals = NULL
-    orders = gtools::permutations(length(var_dimensions), length(var_dimensions))
-    for (i in 1:nrow(orders)) {
-      var_dimensions_temp = var_dimensions[orders[i,]]
-      if (!is.na(start_idx_var)) start_idx_var = start_idx_var[var_dimensions_temp]
-      if (!is.na(count_var)) count_var = count_var[var_dimensions_temp]
-      try(
-        expr = {var_vals = ncdf4::ncvar_get(nc = nc, varid = var_name,
-                                            start = start_idx_var,
-                                            count = count_var,
-                                            collapse_degen = FALSE)},
-        silent = TRUE)
-      if (!is.null(var_vals)) {
-        break
-      }
+    expr = {var_vals = ncdf4::ncvar_get(nc = nc, varid = var_name,
+                                        start = start_idx_var,
+                                        count = count_var,
+                                        collapse_degen = FALSE)}
+    if (is.null(var_vals)) {
+      stop(sprintf("Could not read in variable: %s. Stopping.", var_name))
     }
-    stopifnot(!is.null(var_vals))
 
-    orders = gtools::permutations(length(var_dimensions), length(var_dimensions))
-    for (i in 1:nrow(orders)) {
-      var_dimensions_temp = var_dimensions[orders[i,]]
-    # test which order of dimensions is the correct one
-      dim_size_var = dim_size[var_dimensions_temp]
-      dimnames_var = coordinates[var_dimensions_temp]
-      if (all(dim_size_var == dim(var_vals))) break
-    }
-    stopifnot(all(dim_size_var == dim(var_vals))) # dimensions have to be in correct order
     var_vals = array(data = var_vals, dim = dim_size_var, dimnames = dimnames_var)
 
     if (consistent_dimensions == FALSE) {
